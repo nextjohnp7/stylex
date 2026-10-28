@@ -63,13 +63,33 @@ async function installDependencies(targetDir, packageManager) {
 
       // Try to extract package count from npm/yarn/pnpm output
       let packageCount = null;
-      const npmMatch = stdout.match(/added (\d+) packages?/i);
-      // TODO: Add package count extraction for yarn/pnpm
-      const _yarnMatch = stdout.match(/Done in [\d.]+s/i);
-      const _pnpmMatch = stdout.match(/packages? are ready/i);
 
-      if (npmMatch) {
-        packageCount = parseInt(npmMatch[1], 10);
+      if (packageManager === 'npm') {
+        const npmMatch = stdout.match(/added (\d+) packages?/i);
+        if (npmMatch) {
+          packageCount = parseInt(npmMatch[1], 10);
+        }
+      } else if (packageManager === 'yarn') {
+        // Yarn classic: "success Saved lockfile." / "X packages have been linked" etc.
+        // Modern yarn (berry): "➤ Yarn Report... Processed N packages"
+        const yarnMatch =
+          stdout.match(/Processed (\d+) package/i) ||
+          stdout.match(/(\d+) packages? (?:have been )?(?:linked|installed)/i);
+        if (yarnMatch) {
+          packageCount = parseInt(yarnMatch[1], 10);
+        }
+      } else if (packageManager === 'pnpm') {
+        // pnpm: "Packages: +123" or "Progress: resolved 123, reused 45, downloaded 67, added 89, done"
+        const pnpmAddedMatch = stdout.match(/(?:^|\D)added (\d+)(?:\D|$)/im);
+        const pnpmPackagesMatch = stdout.match(/^Packages: \+(\d+)/im);
+        const pnpmResolvedMatch = stdout.match(/resolved (\d+)/i);
+        if (pnpmPackagesMatch) {
+          packageCount = parseInt(pnpmPackagesMatch[1], 10);
+        } else if (pnpmAddedMatch) {
+          packageCount = parseInt(pnpmAddedMatch[1], 10);
+        } else if (pnpmResolvedMatch) {
+          packageCount = parseInt(pnpmResolvedMatch[1], 10);
+        }
       }
 
       resolve({ packageCount });

@@ -25,7 +25,7 @@ function transform(source: string, opts: any = {}) {
 
 describe('@stylexjs/babel-plugin', () => {
   describe('[validation] stylex.keyframes()', () => {
-    test('local variable keyframes object', () => {
+    test('local variable keyframes object is allowed and evaluated statically', () => {
       const callTransform = () =>
         transform(`
         import * as stylex from '@stylexjs/stylex';
@@ -40,7 +40,34 @@ describe('@stylexjs/babel-plugin', () => {
         export const name = stylex.keyframes(keyframes);
       `);
 
-      expect(callTransform).toThrow();
+      // Local constants referencing a static object are now supported.
+      expect(callTransform).not.toThrow();
+    });
+
+    test('non-static local variable keyframes object throws', () => {
+      expect(() =>
+        transform(`
+        import * as stylex from '@stylexjs/stylex';
+        const keyframes = getFrames();
+        export const name = stylex.keyframes(keyframes);
+      `),
+      ).toThrow(messages.nonStaticValue('keyframes'));
+    });
+
+    test('argument must be an object literal or a reference', () => {
+      expect(() =>
+        transform(`
+        import * as stylex from '@stylexjs/stylex';
+        export const name = stylex.keyframes(null);
+      `),
+      ).toThrow(messages.nonStyleObject('keyframes'));
+
+      expect(() =>
+        transform(`
+        import * as stylex from '@stylexjs/stylex';
+        export const name = stylex.keyframes('string');
+      `),
+      ).toThrow(messages.nonStyleObject('keyframes'));
     });
 
     test('only argument must be an object of objects', () => {

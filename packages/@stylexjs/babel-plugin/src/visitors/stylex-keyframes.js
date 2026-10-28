@@ -52,8 +52,13 @@ export default function transformStyleXKeyframes(
         SyntaxError,
       );
     }
-    // TODO: We should allow using references to local constants here.
-    if (nodeInit.arguments[0].type !== 'ObjectExpression') {
+    
+    // Allow references to local constants - they will be evaluated statically below.
+    const firstArgNode = nodeInit.arguments[0];
+    if (
+      firstArgNode.type !== 'ObjectExpression' &&
+      firstArgNode.type !== 'Identifier'
+    ) {
       throw path.buildCodeFrameError(
         messages.nonStyleObject('keyframes'),
         SyntaxError,
